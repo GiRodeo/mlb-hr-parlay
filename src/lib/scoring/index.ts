@@ -32,6 +32,7 @@ function buildDisplay(ctx: PlayerGameContext): ScoreDisplay {
     teamName: team.name,
     position: ctx.position,
     batSide: ctx.batSide,
+    battingOrder: ctx.battingOrder,
     isHome: ctx.isHome,
     projected: ctx.projected,
     opponentName: opp.name,

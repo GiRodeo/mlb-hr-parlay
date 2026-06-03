@@ -9,6 +9,7 @@ import { DateNavigator } from "./DateNavigator";
 const LINKS = [
   { href: "/", label: "Today" },
   { href: "/value", label: "Value" },
+  { href: "/first-hr", label: "First HR" },
   { href: "/parlays", label: "Parlays" },
   { href: "/ballparks", label: "Ballparks" },
 ];

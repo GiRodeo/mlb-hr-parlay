@@ -19,29 +19,36 @@ interface OddsApiMarket { key: string; outcomes: OddsApiOutcome[] }
 interface OddsApiBook { key: string; title: string; markets: OddsApiMarket[] }
 interface OddsApiEvent { id: string; home_team: string; away_team: string; bookmakers: OddsApiBook[] }
 
+// Per-outcome filter: decides if an outcome is the YES side, NO side, or to
+// be skipped, for a given market. Returns null to skip the outcome entirely.
+type OutcomeRole = "yes" | "no" | null;
+
 /**
- * Fetch best HR ("batter_home_runs" / to-record-a-HR) odds per player for the
- * date's MLB slate. Returns a map keyed by lowercased player name (The Odds
- * API identifies prop subjects by name, not MLB id — the caller name-matches).
+ * Fetch best odds per player for a given prop market across the date's MLB
+ * slate. Shared by batter_home_runs and batter_first_home_run — they differ
+ * only in market key and how YES/NO is detected. Keyed by lowercased player
+ * name (The Odds API identifies prop subjects by name, not MLB id).
  */
-async function fetchLiveOdds(date: string): Promise<Map<string, BestHrOdds>> {
+async function fetchMarketOdds(
+  date: string,
+  marketKey: string,
+  classify: (sideName: string, point?: number) => OutcomeRole,
+): Promise<Map<string, BestHrOdds>> {
   // IMPORTANT: The Odds API serves player props ONLY via the per-event odds
   // endpoint, not the bulk /odds endpoint. So we (1) list the day's events,
-  // then (2) request batter_home_runs for each. Verified against the live API.
+  // then (2) request the market for each. Verified against the live API.
   //
   // Quota note: empty markets (props not posted yet) cost 0 credits; only
-  // events that actually return book data are billed. HR props typically post
-  // a few hours before first pitch, so early-day calls will be empty.
+  // events that actually return book data are billed. Props typically post a
+  // few hours before first pitch, so early-day calls will be empty.
   const eventsUrl =
     `${env.ODDS_API_BASE}/sports/baseball_mlb/events?` +
     new URLSearchParams({ apiKey: env.ODDS_API_KEY, dateFormat: "iso" });
   const events = await httpFetch<Array<{ id: string; commence_time: string }>>(eventsUrl);
 
-  // Keep events on the requested date (UTC date of commence_time).
   const todays = events.filter((e) => e.commence_time.slice(0, 10) === date);
-  const targetEvents = todays.length > 0 ? todays : events; // fall back to all if none match
+  const targetEvents = todays.length > 0 ? todays : events;
 
-  // Collect every book's YES (to hit a HR) price per player, plus NO if posted.
   const byPlayer = new Map<string, { yes: Array<{ book: string; price: number }>; no?: number }>();
 
   for (const ev of targetEvents) {
@@ -50,7 +57,7 @@ async function fetchLiveOdds(date: string): Promise<Map<string, BestHrOdds>> {
       new URLSearchParams({
         apiKey: env.ODDS_API_KEY,
         regions: "us",
-        markets: "batter_home_runs",
+        markets: marketKey,
         oddsFormat: "american",
         dateFormat: "iso",
       });
@@ -58,34 +65,20 @@ async function fetchLiveOdds(date: string): Promise<Map<string, BestHrOdds>> {
     try {
       detail = await httpFetch<OddsApiEvent>(oddsUrl);
     } catch (err) {
-      log.warn("odds: event fetch failed", { eventId: ev.id, err: String(err) });
+      log.warn("odds: event fetch failed", { eventId: ev.id, market: marketKey, err: String(err) });
       continue;
     }
     for (const book of detail.bookmakers ?? []) {
       for (const market of book.markets ?? []) {
-        // ONLY batter_home_runs — NOT batter_first_home_run. "First HR of the
-        // game" is a different, much rarer event (one winner per game) and must
-        // never be compared against our P(≥1 HR) model.
-        if (market.key !== "batter_home_runs") continue;
+        if (market.key !== marketKey) continue;
         for (const o of market.outcomes) {
-          // For HR props the player is in `description`; `name` is the side
-          // ("Over"/"Under"); `point` is the line.
           const player = (o.description ?? "").toLowerCase();
           if (!player) continue;
-
-          // CRITICAL: only the 0.5 line means "to hit at least 1 HR" — which
-          // is what our model predicts. Books may also post Over 1.5 ("2+
-          // HRs"); including those would compare apples to oranges and invent
-          // fake edge. Accept point===0.5, or a missing point (some books omit
-          // it for the standard market).
-          if (o.point !== undefined && o.point !== 0.5) continue;
-
-          const side = (o.name ?? "").toLowerCase();
-          const isYes = side.includes("over") || side.includes("yes");
-          const isNo = side.includes("under") || side.includes("no");
+          const role = classify((o.name ?? "").toLowerCase(), o.point);
+          if (role === null) continue;
           const rec = byPlayer.get(player) ?? { yes: [] };
-          if (isYes) rec.yes.push({ book: book.title, price: o.price });
-          else if (isNo) rec.no = o.price;
+          if (role === "yes") rec.yes.push({ book: book.title, price: o.price });
+          else rec.no = o.price;
           byPlayer.set(player, rec);
         }
       }
@@ -109,18 +102,45 @@ async function fetchLiveOdds(date: string): Promise<Map<string, BestHrOdds>> {
       allBooks: rec.yes.map((y) => ({ bookmaker: y.book, american: y.price })),
     });
   }
-  log.info("odds: live", { date, players: out.size });
+  log.info("odds: live", { date, market: marketKey, players: out.size });
   return out;
 }
 
+// ─── Outcome classifiers per market ─────────────────────────────────
+
+// batter_home_runs: Over/Under on a line. ONLY the 0.5 line = "≥1 HR" (what
+// our HR model predicts). Over 1.5 ("2+ HRs") must be excluded.
+const classifyHrProp = (side: string, point?: number): OutcomeRole => {
+  if (point !== undefined && point !== 0.5) return null;
+  if (side.includes("over") || side.includes("yes")) return "yes";
+  if (side.includes("under") || side.includes("no")) return "no";
+  return null;
+};
+
+// batter_first_home_run: Yes/No, no line.
+const classifyFirstHr = (side: string): OutcomeRole => {
+  if (side.includes("yes")) return "yes";
+  if (side.includes("no")) return "no";
+  return null;
+};
+
 // ─── Public entry ───────────────────────────────────────────────────
 
-/** Live odds keyed by lowercased player name. Empty map when no key is set. */
+/** Live "to hit ≥1 HR" odds keyed by lowercased player name. Empty if no key. */
 export async function getLiveHrOddsByName(date: string): Promise<Map<string, BestHrOdds>> {
   if (!hasOddsApi) return new Map();
-  // Cache as entries — JSON can't serialize a Map — then rehydrate.
-  const entries = await withCache(`odds:live:${date}`, env.CACHE_TTL_LINEUPS_S, async () => {
-    const map = await fetchLiveOdds(date);
+  const entries = await withCache(`odds:hr:${date}`, env.CACHE_TTL_LINEUPS_S, async () => {
+    const map = await fetchMarketOdds(date, "batter_home_runs", classifyHrProp);
+    return Array.from(map.entries());
+  });
+  return new Map(entries);
+}
+
+/** Live "first HR of the game" odds keyed by lowercased player name. */
+export async function getFirstHrOddsByName(date: string): Promise<Map<string, BestHrOdds>> {
+  if (!hasOddsApi) return new Map();
+  const entries = await withCache(`odds:firsthr:${date}`, env.CACHE_TTL_LINEUPS_S, async () => {
+    const map = await fetchMarketOdds(date, "batter_first_home_run", classifyFirstHr);
     return Array.from(map.entries());
   });
   return new Map(entries);

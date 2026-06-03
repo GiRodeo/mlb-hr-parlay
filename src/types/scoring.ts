@@ -64,6 +64,7 @@ export interface ScoreDisplay {
   teamName: string;
   position: string;            // "RF", "DH", …
   batSide: Handedness;
+  battingOrder: number;        // 1–9; drives first-HR timing
   isHome: boolean;
   // True when this player's lineup slot is PROJECTED (from a recent game)
   // rather than an officially confirmed lineup — e.g. looking ahead to a
