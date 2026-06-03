@@ -9,6 +9,7 @@
 import type { HistoryStore } from "./types";
 import type { HistoryFilters, StoredParlay } from "@/types";
 import { log } from "@/lib/utils/logger";
+import { HISTORY_SEED } from "./memory";
 
 type Sql = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>;
 
@@ -16,31 +17,48 @@ export class PostgresHistoryStore implements HistoryStore {
   private ready: Promise<void> | null = null;
   constructor(private sql: Sql) {}
 
-  // Lazily ensure the table exists, exactly once.
+  // Lazily ensure the table exists AND is seeded, exactly once. Seeding only
+  // happens when the table is empty — so the demo Hit/Miss history appears on
+  // a fresh Postgres database (matching the in-memory store), but real data is
+  // never overwritten on subsequent runs.
   private ensure(): Promise<void> {
     if (!this.ready) {
-      this.ready = this.sql`
-        CREATE TABLE IF NOT EXISTS parlay_history (
-          id TEXT PRIMARY KEY,
-          date TEXT NOT NULL,
-          leg_count INT NOT NULL,
-          player_ids JSONB NOT NULL,
-          players_label TEXT NOT NULL,
-          confidence REAL NOT NULL,
-          combined_odds INT NOT NULL,
-          combined_probability REAL NOT NULL,
-          outcome TEXT NOT NULL,
-          leg_results JSONB NOT NULL,
-          created_at TEXT NOT NULL,
-          settled_at TEXT
-        )
-      `.then(() => undefined);
+      this.ready = (async () => {
+        await this.sql`
+          CREATE TABLE IF NOT EXISTS parlay_history (
+            id TEXT PRIMARY KEY,
+            date TEXT NOT NULL,
+            leg_count INT NOT NULL,
+            player_ids JSONB NOT NULL,
+            players_label TEXT NOT NULL,
+            confidence REAL NOT NULL,
+            combined_odds INT NOT NULL,
+            combined_probability REAL NOT NULL,
+            outcome TEXT NOT NULL,
+            leg_results JSONB NOT NULL,
+            created_at TEXT NOT NULL,
+            settled_at TEXT
+          )
+        `;
+        const { rows } = await this.sql`SELECT COUNT(*)::int AS n FROM parlay_history`;
+        const count = Number(rows[0]?.n ?? 0);
+        if (count === 0) {
+          log.info("seeding empty parlay_history table", { rows: HISTORY_SEED.length });
+          for (const p of HISTORY_SEED) await this.insert(p);
+        }
+      })();
     }
     return this.ready;
   }
 
   async save(p: StoredParlay): Promise<void> {
     await this.ensure();
+    await this.insert(p);
+  }
+
+  // Raw upsert WITHOUT ensure() — used by both save() and the seeding step
+  // (seeding runs inside ensure(), so it must not call ensure() recursively).
+  private async insert(p: StoredParlay): Promise<void> {
     await this.sql`
       INSERT INTO parlay_history
         (id, date, leg_count, player_ids, players_label, confidence,

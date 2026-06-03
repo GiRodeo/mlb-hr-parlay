@@ -136,3 +136,7 @@ function buildSeed(): StoredParlay[] {
 }
 
 const SEED: StoredParlay[] = buildSeed();
+
+// Exported so the Postgres store can seed an empty table with the same demo
+// data, keeping dev (memory) and prod (Postgres) consistent on first run.
+export const HISTORY_SEED: StoredParlay[] = SEED;

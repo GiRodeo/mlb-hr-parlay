@@ -56,19 +56,27 @@ class PostgresBetStore implements BetStore {
   constructor(private sql: Sql) {}
   private ensure() {
     if (!this.ready) {
-      this.ready = this.sql`
-        CREATE TABLE IF NOT EXISTS bets (
-          id TEXT PRIMARY KEY,
-          date TEXT NOT NULL,
-          label TEXT NOT NULL,
-          american_odds INT NOT NULL,
-          stake_units REAL NOT NULL,
-          result TEXT NOT NULL,
-          profit_units REAL,
-          created_at TEXT NOT NULL,
-          settled_at TEXT,
-          note TEXT
-        )`.then(() => undefined);
+      this.ready = (async () => {
+        await this.sql`
+          CREATE TABLE IF NOT EXISTS bets (
+            id TEXT PRIMARY KEY,
+            date TEXT NOT NULL,
+            label TEXT NOT NULL,
+            american_odds INT NOT NULL,
+            stake_units REAL NOT NULL,
+            result TEXT NOT NULL,
+            profit_units REAL,
+            created_at TEXT NOT NULL,
+            settled_at TEXT,
+            note TEXT
+          )`;
+        // Seed the demo bankroll history once, only when the table is empty.
+        const { rows } = await this.sql`SELECT COUNT(*)::int AS n FROM bets`;
+        if (Number(rows[0]?.n ?? 0) === 0) {
+          log.info("seeding empty bets table", { rows: SEED.length });
+          for (const b of SEED) await this.insert(b);
+        }
+      })();
     }
     return this.ready;
   }
@@ -79,6 +87,10 @@ class PostgresBetStore implements BetStore {
   }
   async add(b: BetRecord) {
     await this.ensure();
+    await this.insert(b);
+  }
+  // Raw insert without ensure() — safe to call during seeding.
+  private async insert(b: BetRecord) {
     await this.sql`
       INSERT INTO bets (id, date, label, american_odds, stake_units, result, profit_units, created_at, settled_at, note)
       VALUES (${b.id}, ${b.date}, ${b.label}, ${b.americanOdds}, ${b.stakeUnits}, ${b.result},
