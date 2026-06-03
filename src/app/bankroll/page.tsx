@@ -13,9 +13,11 @@ import { Select } from "@/components/ui/select";
 import { BankrollChart } from "@/components/domain/BankrollChart";
 import { ErrorState, Skeleton } from "@/components/ui/states";
 import { useBets, useAddBet } from "@/hooks/useBets";
+import { useHistory } from "@/hooks/useHistory";
 import { useUiStore } from "@/stores/uiStore";
+import { shiftIso } from "@/lib/utils/dates";
 import { formatAmerican } from "@/lib/betting/odds";
-import type { BetRecord, BetResult } from "@/types";
+import type { BetRecord, BetResult, StoredParlay } from "@/types";
 
 const RESULT_BADGE: Record<BetResult, { variant: "high" | "low" | "secondary" | "outline"; label: string }> = {
   won: { variant: "high", label: "Won" },
@@ -73,7 +75,9 @@ export default function BankrollPage() {
       </div>
 
       {/* bets table */}
-      <div className="mt-6">
+      {/* ── Table 1: My Bets (everything logged via Add Bet) ───────── */}
+      <div className="mt-8">
+        <h2 className="mb-3 text-lg font-bold tracking-tight">My Bets</h2>
         {isError ? (
           <ErrorState message="Couldn't load bets." onRetry={() => refetch()} />
         ) : (
@@ -92,19 +96,102 @@ export default function BankrollPage() {
               <TableBody>
                 {(data?.bets ?? []).map((b) => <BetRow key={b.id} bet={b} />)}
                 {!isLoading && (data?.bets.length ?? 0) === 0 && (
-                  <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">No bets logged yet.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">No bets logged yet — use “Log a bet” above.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
           </Card>
         )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Your own logged bets. Bankroll is in <strong>units</strong> (starting at 100); suggested
+          stakes elsewhere use ¼-Kelly.
+        </p>
       </div>
 
-      <p className="mt-3 text-xs text-muted-foreground">
-        Bankroll is in <strong>units</strong> (starting at 100). Suggested stakes elsewhere use ¼-Kelly.
-        Logged bets persist to the database when one is configured; otherwise they reset on restart.
-      </p>
+      {/* ── Table 2: Market recommendations, last 14 days ──────────── */}
+      <RecommendationResults />
     </PageContainer>
+  );
+}
+
+// Shows how the model's RECOMMENDATIONS performed over the last 14 days
+// (Won/Lost), independent of what the user personally bet — a "market" view
+// to compare against "My Bets" above.
+function RecommendationResults() {
+  const today = useUiStore((s) => s.selectedDate);
+  const since = shiftIso(today, -14);
+  const { data, isLoading, isError, refetch } = useHistory({ sinceDate: since });
+
+  // Only settled recommendations (Won/Lost) — pending ones aren't "results".
+  const settled = (data?.parlays ?? []).filter((p) => p.outcome !== "pending");
+  const wins = settled.filter((p) => p.outcome === "hit").length;
+  const winRate = settled.length ? (wins / settled.length) * 100 : 0;
+
+  return (
+    <div className="mt-10">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight">Recommendation Results — Last 14 Days</h2>
+          <p className="text-sm text-muted-foreground">
+            How the model&apos;s recommendations performed (Won / Lost), regardless of what you bet.
+          </p>
+        </div>
+        {!isLoading && settled.length > 0 && (
+          <span className="text-sm text-muted-foreground">
+            <span className="stat-figure font-semibold text-foreground">{wins}-{settled.length - wins}</span>{" "}
+            (<span className="stat-figure font-semibold text-foreground">{winRate.toFixed(0)}%</span> hit)
+          </span>
+        )}
+      </div>
+
+      {isError ? (
+        <ErrorState message="Couldn't load recommendation history." onRetry={() => refetch()} />
+      ) : (
+        <Card className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Recommendation</TableHead>
+                <TableHead className="text-right">Legs</TableHead>
+                <TableHead className="text-right">Confidence</TableHead>
+                <TableHead className="text-right">Odds</TableHead>
+                <TableHead className="text-right">Result</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">Loading…</TableCell></TableRow>
+              ) : settled.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">No settled recommendations in the last 14 days.</TableCell></TableRow>
+              ) : (
+                settled.map((p) => <RecRow key={p.id} parlay={p} />)
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+      <p className="mt-2 text-xs text-muted-foreground">
+        This is the full market of model recommendations — use it to compare overall model
+        performance against your own bets above.
+      </p>
+    </div>
+  );
+}
+
+function RecRow({ parlay }: { parlay: StoredParlay }) {
+  const won = parlay.outcome === "hit";
+  return (
+    <TableRow>
+      <TableCell className="stat-figure text-sm">{parlay.date}</TableCell>
+      <TableCell className="font-medium">{parlay.playersLabel}</TableCell>
+      <TableCell className="stat-figure text-right">{parlay.legCount}</TableCell>
+      <TableCell className="stat-figure text-right">{Math.round(parlay.confidence)}</TableCell>
+      <TableCell className="stat-figure text-right">{formatAmerican(parlay.combinedOdds)}</TableCell>
+      <TableCell className="text-right">
+        <Badge variant={won ? "high" : "low"}>{won ? "Won" : "Lost"}</Badge>
+      </TableCell>
+    </TableRow>
   );
 }
 
