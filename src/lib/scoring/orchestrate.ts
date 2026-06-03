@@ -27,12 +27,25 @@ export async function getDailyScoredPlayers(date: string): Promise<DailyScoredPl
     log.info("orchestrate start", { date, games: games.length });
 
     const season = Number(date.slice(0, 4));
-    // Pull the heavy season-level datasets once and reuse.
-    const [batterCast, pitcherCast, pitcherFG] = await Promise.all([
+    // Pull the heavy season-level datasets once and reuse. Use allSettled so a
+    // single blocked/failed source (e.g. FanGraphs behind Cloudflare, Savant
+    // throttling a datacenter IP) DEGRADES the slate instead of 500-ing the
+    // whole request. Any missing source falls back to neutral values in the
+    // scorer (blankPitcherAdvanced / blankPitcherStatcast, empty batter map).
+    type BatterMap = Awaited<ReturnType<typeof savant.getBatterStatcastSeason>>;
+    type PitcherCastMap = Awaited<ReturnType<typeof savant.getPitcherStatcastSeason>>;
+    type PitcherFgMap = Awaited<ReturnType<typeof fangraphs.getPitcherAdvancedSeason>>;
+    const [batterRes, pitcherCastRes, pitcherFGRes] = await Promise.allSettled([
       savant.getBatterStatcastSeason(season),
       savant.getPitcherStatcastSeason(season),
       fangraphs.getPitcherAdvancedSeason(season),
     ]);
+    const batterCast: BatterMap = batterRes.status === "fulfilled" ? batterRes.value : new Map();
+    const pitcherCast: PitcherCastMap = pitcherCastRes.status === "fulfilled" ? pitcherCastRes.value : new Map();
+    const pitcherFG: PitcherFgMap = pitcherFGRes.status === "fulfilled" ? pitcherFGRes.value : new Map();
+    if (batterRes.status === "rejected") log.warn("savant batters unavailable", { err: String(batterRes.reason) });
+    if (pitcherCastRes.status === "rejected") log.warn("savant pitchers unavailable", { err: String(pitcherCastRes.reason) });
+    if (pitcherFGRes.status === "rejected") log.warn("fangraphs unavailable — using neutral pitcher data", { err: String(pitcherFGRes.reason) });
 
     // Build games CONCURRENTLY (bounded) instead of one-at-a-time. Cap at 6
     // games in flight so we parallelize for speed without hammering MLB into
