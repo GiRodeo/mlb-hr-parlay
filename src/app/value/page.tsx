@@ -33,30 +33,32 @@ export default function ValuePage() {
         subtitle="Where our model disagrees with the market — ranked by expected value"
       />
 
-      {/* Demo-odds disclosure: never present demo prices as a real market. */}
-      {value.data?.usingDemoOdds && (
-        <div className="mb-4 flex items-start gap-3 rounded-lg border border-confidence-med/40 bg-confidence-med/10 px-4 py-3 text-sm">
-          <span className="text-lg leading-none" aria-hidden>🧪</span>
-          <div>
-            <span className="font-semibold">Demo odds.</span>{" "}
-            <span className="text-muted-foreground">
-              No live sportsbook feed is connected, so prices below are simulated for
-              demonstration. EV, edge and Kelly figures are computed correctly, but
-              against fake lines — don&apos;t bet on them. Add an <code className="rounded bg-muted px-1">ODDS_API_KEY</code> for live odds.
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* EV table */}
       {value.isLoading ? (
         <CardGridSkeleton count={3} />
       ) : value.isError ? (
         <ErrorState message="Couldn't load value picks." onRetry={() => value.refetch()} />
+      ) : value.data && !value.data.oddsConfigured ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <span className="text-3xl" aria-hidden>🔌</span>
+            <h3 className="text-lg font-semibold">No live odds feed connected</h3>
+            <p className="max-w-md text-sm text-muted-foreground">
+              The Value Finder compares our model against real sportsbook prices to find
+              expected-value edges. It needs a live odds source to do that. Set an{" "}
+              <code className="rounded bg-muted px-1">ODDS_API_KEY</code> (The Odds API) in your
+              environment to enable live HR-prop pricing, EV, and Kelly staking.
+            </p>
+            <p className="max-w-md text-xs text-muted-foreground">
+              We intentionally don&apos;t show simulated odds here — every price on this page
+              is a real market line or nothing at all.
+            </p>
+          </CardContent>
+        </Card>
       ) : picks.length === 0 ? (
         <EmptyState
           title="No priced bets for this date"
-          message="Either no games/odds are available yet, or lineups aren't set. Try another date."
+          message="The odds feed returned no HR props for today's slate, or lineups aren't set yet. Try another date."
         />
       ) : (
         <>

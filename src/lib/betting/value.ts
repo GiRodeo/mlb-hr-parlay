@@ -2,7 +2,7 @@
 // the betting verdict for each — EV, edge, and a Kelly stake. This is the
 // piece that turns "who's likely to homer" into "which bets are worth making".
 
-import { getLiveHrOddsByName, buildDemoOdds, hasOddsApi } from "@/lib/services/oddsApi";
+import { getLiveHrOddsByName, hasOddsApi } from "@/lib/services/oddsApi";
 import { expectedValue, edge as edgeFn } from "./odds";
 import { kellyStake } from "./kelly";
 import type { DailyScoredPlayer } from "@/lib/scoring/orchestrate";
@@ -13,19 +13,13 @@ export async function buildValuePicks(
   scored: DailyScoredPlayer[],
   generatedAtIso: string,
 ): Promise<ValueResponse> {
-  // Resolve odds source. Live (paid) if a key is set, else the demo market.
-  const usingDemoOdds = !hasOddsApi;
+  // Live odds only. If no odds API key is configured, there is no market to
+  // value against — we return an empty set and flag it so the UI explains why
+  // (rather than inventing fake odds).
+  const oddsConfigured = hasOddsApi;
+  const oddsByPlayerId = new Map<number, BestHrOdds>();
 
-  let oddsByPlayerId = new Map<number, BestHrOdds>();
-  if (usingDemoOdds) {
-    oddsByPlayerId = buildDemoOdds(
-      scored.map((s) => ({
-        playerId: s.playerId as unknown as number,
-        name: s.fullName,
-        modelProb: s.impliedHrProbability,
-      })),
-    );
-  } else {
+  if (oddsConfigured) {
     // Live odds come keyed by player NAME (the odds API has no MLB ids), so
     // we name-match into our scored players.
     const byName = await getLiveHrOddsByName(date);
@@ -59,12 +53,11 @@ export async function buildValuePicks(
       evPercent: ev,
       kellyUnits: kelly.units,
       positiveEv: ev > 0,
-      isDemo: odds.isDemo,
     });
   }
 
   // Sort by EV descending — the best bets first.
   picks.sort((a, b) => b.evPercent - a.evPercent);
 
-  return { date, generatedAt: generatedAtIso, usingDemoOdds, picks };
+  return { date, generatedAt: generatedAtIso, oddsConfigured, picks };
 }

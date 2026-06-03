@@ -6,7 +6,7 @@ import type { PlayerId } from "./common";
 export interface BookHrOdds {
   playerId: PlayerId;
   playerName: string;
-  bookmaker: string;        // "draftkings", "fanduel", … or "DEMO"
+  bookmaker: string;        // "draftkings", "fanduel", …
   yesAmerican: number;      // odds to hit ≥1 HR
   noAmerican?: number;      // odds NOT to (when the book posts both sides)
 }
@@ -21,7 +21,6 @@ export interface BestHrOdds {
   marketProb: number;
   // every book's price, for the line-shopping view
   allBooks: Array<{ bookmaker: string; american: number }>;
-  isDemo: boolean;          // true when sourced from the demo generator
 }
 
 // The value verdict for one player: our model vs the market.
@@ -39,12 +38,13 @@ export interface ValuePick {
   evPercent: number;        // expected value per unit staked
   kellyUnits: number;       // suggested stake (quarter-Kelly, capped)
   positiveEv: boolean;
-  isDemo: boolean;
 }
 
 export interface ValueResponse {
   date: string;
   generatedAt: string;
-  usingDemoOdds: boolean;   // banner trigger in the UI
+  // False when no live odds feed (ODDS_API_KEY) is configured — the UI shows a
+  // "connect an odds feed" state instead of picks. We never fabricate odds.
+  oddsConfigured: boolean;
   picks: ValuePick[];       // sorted by EV desc
 }

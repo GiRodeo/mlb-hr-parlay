@@ -32,8 +32,8 @@ const Schema = z.object({
   CRON_SECRET: z.string().optional().default(""),
 
   // The Odds API key (the-odds-api.com) for live sportsbook HR prop odds.
-  // PAID — no good free tier for HR props. If unset, the value layer uses a
-  // clearly-labeled DEMO odds generator so the feature is testable.
+  // PAID — no usable free tier for HR props. If unset, the Value page shows a
+  // "connect an odds feed" state; we never fabricate odds.
   ODDS_API_KEY: z.string().optional().default(""),
   ODDS_API_BASE: z.string().url().default("https://api.the-odds-api.com/v4"),
 

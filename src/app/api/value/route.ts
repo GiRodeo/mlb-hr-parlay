@@ -1,8 +1,9 @@
 // GET /api/value?date=YYYY-MM-DD → today's HR bets ranked by expected value,
 // each with edge vs. the market and a suggested Kelly stake.
 //
-// Uses live sportsbook odds when ODDS_API_KEY is set, else a clearly-labeled
-// demo market (response.usingDemoOdds drives a UI banner).
+// Uses live sportsbook odds when ODDS_API_KEY is set. When no key is
+// configured, response.oddsConfigured is false and the UI shows a
+// "connect an odds feed" state — we never fabricate odds.
 
 import { NextRequest } from "next/server";
 import { getDailyScoredPlayers } from "@/lib/scoring/orchestrate";
