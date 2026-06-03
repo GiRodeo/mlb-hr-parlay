@@ -31,17 +31,25 @@ function minusDays(iso: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+// Columns the table can sort by.
+type SortKey = "date" | "legCount" | "confidence" | "combinedOdds";
+const DEFAULT_LEG = "all", DEFAULT_CONF = "0", DEFAULT_RANGE = "all";
+
 export default function ParlaysHistoryPage() {
-  const [legFilter, setLegFilter] = useState("all");
-  const [minConfidence, setMinConfidence] = useState("0");
-  const [rangeFilter, setRangeFilter] = useState("all"); // "7" | "14" | "30" | "all"
+  const [legFilter, setLegFilter] = useState(DEFAULT_LEG);
+  const [minConfidence, setMinConfidence] = useState(DEFAULT_CONF);
+  const [rangeFilter, setRangeFilter] = useState(DEFAULT_RANGE); // "7" | "14" | "30" | "all"
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   // Which row is expanded (only one at a time for a clean layout).
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Anchor date-range math to the app's "today" so it lines up with the data.
   const today = useUiStore((s) => s.selectedDate);
 
-  // Map UI controls → API filter object (memoized so the query key is stable).
+  // Map server-side controls → API filter object (memoized so the query key
+  // is stable). Search + sort are applied client-side over the result set.
   const filters = useMemo<HistoryFilters>(() => {
     const f: HistoryFilters = {};
     if (legFilter !== "all") f.legCount = Number(legFilter) as 2 | 3 | 4;
@@ -52,7 +60,35 @@ export default function ParlaysHistoryPage() {
 
   const { data, isLoading, isError, refetch, isPlaceholderData } = useHistory(filters);
   const summary = data?.summary;
-  const parlays = data?.parlays ?? [];
+
+  const hasActiveFilters =
+    legFilter !== DEFAULT_LEG || minConfidence !== DEFAULT_CONF ||
+    rangeFilter !== DEFAULT_RANGE || search.trim() !== "";
+
+  const clearFilters = () => {
+    setLegFilter(DEFAULT_LEG); setMinConfidence(DEFAULT_CONF);
+    setRangeFilter(DEFAULT_RANGE); setSearch("");
+  };
+
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir(key === "date" ? "desc" : "desc"); }
+  };
+
+  // Client-side: filter by player-name search, then sort.
+  const parlays = useMemo(() => {
+    let rows = data?.parlays ?? [];
+    const q = search.trim().toLowerCase();
+    if (q) rows = rows.filter((p) => p.playersLabel.toLowerCase().includes(q));
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = a[sortKey], bv = b[sortKey];
+      const cmp = typeof av === "number" && typeof bv === "number"
+        ? av - bv
+        : String(av).localeCompare(String(bv));
+      return cmp * dir;
+    });
+  }, [data, search, sortKey, sortDir]);
 
   return (
     <PageContainer>
@@ -114,6 +150,30 @@ export default function ParlaysHistoryPage() {
               ]}
             />
           </FilterField>
+          <FilterField label="Search player">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="e.g. Judge"
+              className="h-9 w-44 rounded-md border border-input bg-card px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </FilterField>
+
+          {/* count + clear, pushed to the right */}
+          <div className="ml-auto flex items-center gap-3 self-end">
+            <span className="text-xs text-muted-foreground">
+              {isLoading ? "Loading…" : `${parlays.length} ${parlays.length === 1 ? "parlay" : "parlays"}`}
+            </span>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium hover:bg-secondary"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -126,11 +186,11 @@ export default function ParlaysHistoryPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8" />
-                <TableHead>Date</TableHead>
-                <TableHead>Legs</TableHead>
+                <SortHead label="Date" col="date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <SortHead label="Legs" col="legCount" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                 <TableHead>Players</TableHead>
-                <TableHead className="text-right">Confidence</TableHead>
-                <TableHead className="text-right">Odds</TableHead>
+                <SortHead label="Confidence" col="confidence" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="text-right" />
+                <SortHead label="Odds" col="combinedOdds" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="text-right" />
                 <TableHead className="text-right">Outcome</TableHead>
               </TableRow>
             </TableHeader>
@@ -301,5 +361,25 @@ function FilterField({ label, children }: { label: string; children: React.React
       <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       {children}
     </label>
+  );
+}
+
+function SortHead({
+  label, col, sortKey, sortDir, onSort, className,
+}: {
+  label: string; col: SortKey; sortKey: SortKey; sortDir: "asc" | "desc";
+  onSort: (k: SortKey) => void; className?: string;
+}) {
+  const active = sortKey === col;
+  return (
+    <TableHead className={className}>
+      <button
+        onClick={() => onSort(col)}
+        className={cn("inline-flex items-center gap-1 transition-colors hover:text-foreground", active && "text-foreground")}
+      >
+        {label}
+        <span className="text-[10px]">{active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </TableHead>
   );
 }
