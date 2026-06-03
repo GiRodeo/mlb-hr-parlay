@@ -31,6 +31,12 @@ const Schema = z.object({
   // Shared secret for the cron settle endpoint (Vercel Cron sends it).
   CRON_SECRET: z.string().optional().default(""),
 
+  // The Odds API key (the-odds-api.com) for live sportsbook HR prop odds.
+  // PAID — no good free tier for HR props. If unset, the value layer uses a
+  // clearly-labeled DEMO odds generator so the feature is testable.
+  ODDS_API_KEY: z.string().optional().default(""),
+  ODDS_API_BASE: z.string().url().default("https://api.the-odds-api.com/v4"),
+
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });
 
@@ -49,6 +55,8 @@ export const env = Schema.parse({
   UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
   POSTGRES_URL: process.env.POSTGRES_URL,
   CRON_SECRET: process.env.CRON_SECRET,
+  ODDS_API_KEY: process.env.ODDS_API_KEY,
+  ODDS_API_BASE: process.env.ODDS_API_BASE,
   LOG_LEVEL: process.env.LOG_LEVEL,
 });
 
@@ -57,3 +65,6 @@ export const hasRedis = Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_
 
 /** True when a Postgres connection string is configured. */
 export const hasPostgres = Boolean(env.POSTGRES_URL);
+
+/** True when a live odds API key is configured (else value layer uses demo). */
+export const hasOddsApi = Boolean(env.ODDS_API_KEY);

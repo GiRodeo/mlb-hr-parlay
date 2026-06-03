@@ -10,5 +10,6 @@ export * from "./PlayerAvatar";
 export * from "./DashboardHero";
 export * from "./ProjectedBanner";
 export * from "./ScoreBreakdown";
+export * from "./ReliabilityChart";
 export * from "./WeatherParkSidebar";
 export * from "./FieldDiagram";
