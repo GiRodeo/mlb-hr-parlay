@@ -15,6 +15,7 @@ import { ConfidenceRing } from "@/components/domain/ConfidenceRing";
 import { StatBar } from "@/components/domain/StatBar";
 import { TrendChart } from "@/components/domain/TrendChart";
 import { ProjectedBanner } from "@/components/domain/ProjectedBanner";
+import { ScoreBreakdown } from "@/components/domain/ScoreBreakdown";
 import { ParkFactorBadge } from "@/components/domain/ParkFactorBadge";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState, EmptyState, Skeleton } from "@/components/ui/states";
@@ -128,6 +129,11 @@ function Profile({ score }: { score: import("@/types").Score }) {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* why this score */}
+      <div className="mt-6">
+        <ScoreBreakdown score={score} />
       </div>
 
       {/* trend */}
