@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/first-hr", label: "First HR" },
   { href: "/parlays", label: "Parlays" },
   { href: "/ballparks", label: "Ballparks" },
+  { href: "/glossary", label: "Glossary" },
 ];
 
 export function Navbar() {
