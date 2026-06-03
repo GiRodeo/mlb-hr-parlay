@@ -28,7 +28,7 @@ export function StatBar({
   higherIsBetter = true,
   className,
 }: StatBarProps) {
-  const domainMax = max ?? Math.max(value, leagueAvg) * 1.6 || 1;
+  const domainMax = max ?? (Math.max(value, leagueAvg) * 1.6 || 1);
   const valuePct = Math.min(100, (value / domainMax) * 100);
   const avgPct = Math.min(100, (leagueAvg / domainMax) * 100);
 
