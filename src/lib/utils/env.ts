@@ -18,7 +18,9 @@ const Schema = z.object({
   // Production cache (Upstash Redis, HTTP/REST — serverless-native).
   // Vercel's Upstash integration injects these two automatically. If both
   // are present we use Redis; otherwise we fall back to an in-memory cache.
-  UPSTASH_REDIS_REST_URL: z.string().url().optional().default(""),
+  // Allow "" (unset) OR a valid URL — `.url()` alone rejects empty strings,
+  // which would crash the build when the var isn't configured.
+  UPSTASH_REDIS_REST_URL: z.literal("").or(z.string().url()).default(""),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional().default(""),
 
   // Production persistence for parlay history (Vercel Postgres / Neon).

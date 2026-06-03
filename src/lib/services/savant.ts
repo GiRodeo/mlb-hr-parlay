@@ -112,7 +112,10 @@ export async function getPitcherStatcastSeason(season: number): Promise<Map<numb
 // double-quoted strings only when names contain commas. A minimal parser is
 // safer than pulling a CSV dependency and lets us keep types tight.
 
-function parseCsv<T extends Record<string, string>>(csv: string): T[] {
+// T is the row shape the caller expects. We build a string map per row and
+// cast — the constraint is intentionally loose (no index-signature bound) so
+// concrete interfaces like SavantRawBatterRow can be passed directly.
+function parseCsv<T>(csv: string): T[] {
   const lines = csv.split(/\r?\n/).filter((l) => l.length);
   if (lines.length < 2) return [];
   const headers = splitCsvLine(lines[0]!);
