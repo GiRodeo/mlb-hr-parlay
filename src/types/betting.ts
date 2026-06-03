@@ -34,6 +34,9 @@ export interface ValuePick {
   marketProb: number;       // de-vigged market probability (0–1)
   bestAmerican: number;     // best price available
   bestBook: string;
+  // Every book's price for this player, for line shopping / source display.
+  // Sorted best→worst for the bettor. Single entry when only one book posts.
+  allBooks: Array<{ bookmaker: string; american: number }>;
   edge: number;             // modelProb - marketProb
   evPercent: number;        // expected value per unit staked
   kellyUnits: number;       // suggested stake (quarter-Kelly, capped)

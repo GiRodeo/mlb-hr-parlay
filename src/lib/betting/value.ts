@@ -49,6 +49,8 @@ export async function buildValuePicks(
       marketProb: odds.marketProb,
       bestAmerican: odds.bestAmerican,
       bestBook: odds.bestBook,
+      // Sort books best→worst price for the line-shopping display.
+      allBooks: [...odds.allBooks].sort((a, b) => b.american - a.american),
       edge: edgeFn(modelProb, odds.marketProb),
       evPercent: ev,
       kellyUnits: kelly.units,

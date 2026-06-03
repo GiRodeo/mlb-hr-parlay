@@ -4,6 +4,7 @@
 // section so you can judge whether to trust the probabilities at all.
 "use client";
 
+import { Fragment, useState } from "react";
 import { useUiStore } from "@/stores/uiStore";
 import { useValue } from "@/hooks/useValue";
 import { useCalibration } from "@/hooks/useCalibration";
@@ -88,7 +89,8 @@ export default function ValuePage() {
             <strong>Model</strong> = our HR probability. <strong>Market</strong> = de-vigged book probability.
             <strong> Edge</strong> = model − market. <strong>EV</strong> = expected profit per unit staked at the
             best price. <strong>Kelly</strong> = suggested stake (¼-Kelly, capped at 5% of a 100-unit bankroll).
-            Only positive-EV bets get a stake.
+            Only positive-EV bets get a stake. Odds sourced live from US sportsbooks via The Odds API —
+            click a row to compare prices across books.
           </p>
         </>
       )}
@@ -134,31 +136,70 @@ export default function ValuePage() {
 }
 
 function ValueRow({ pick }: { pick: ValuePick }) {
+  const [open, setOpen] = useState(false);
   const evColor = pick.evPercent > 0 ? "text-confidence-high" : "text-confidence-low";
   const edgeColor = pick.edge > 0 ? "text-confidence-high" : "text-muted-foreground";
+  const canShop = pick.allBooks.length > 1;
+
   return (
-    <TableRow>
-      <TableCell>
-        <Link href={`/player/${pick.playerId}`} className="font-medium hover:underline">
-          {pick.fullName}
-        </Link>
-        <div className="text-xs text-muted-foreground">{pick.teamAbbr} · {pick.matchup}</div>
-      </TableCell>
-      <TableCell className="stat-figure text-right">{(pick.modelProb * 100).toFixed(1)}%</TableCell>
-      <TableCell className="stat-figure text-right text-muted-foreground">{(pick.marketProb * 100).toFixed(1)}%</TableCell>
-      <TableCell className={`stat-figure text-right font-semibold ${edgeColor}`}>
-        {pick.edge > 0 ? "+" : ""}{(pick.edge * 100).toFixed(1)}%
-      </TableCell>
-      <TableCell className="text-right">
-        <span className="stat-figure">{formatAmerican(pick.bestAmerican)}</span>
-        <div className="text-[10px] text-muted-foreground">{pick.bestBook}</div>
-      </TableCell>
-      <TableCell className={`stat-figure text-right font-bold ${evColor}`}>
-        {pick.evPercent > 0 ? "+" : ""}{(pick.evPercent * 100).toFixed(0)}%
-      </TableCell>
-      <TableCell className="stat-figure text-right">
-        {pick.kellyUnits > 0 ? `${pick.kellyUnits}u` : <span className="text-muted-foreground">—</span>}
-      </TableCell>
-    </TableRow>
+    <Fragment>
+      <TableRow
+        className={canShop ? "cursor-pointer" : ""}
+        onClick={canShop ? () => setOpen((o) => !o) : undefined}
+        aria-expanded={canShop ? open : undefined}
+      >
+        <TableCell>
+          <Link href={`/player/${pick.playerId}`} className="font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
+            {pick.fullName}
+          </Link>
+          <div className="text-xs text-muted-foreground">{pick.teamAbbr} · {pick.matchup}</div>
+        </TableCell>
+        <TableCell className="stat-figure text-right">{(pick.modelProb * 100).toFixed(1)}%</TableCell>
+        <TableCell className="stat-figure text-right text-muted-foreground">{(pick.marketProb * 100).toFixed(1)}%</TableCell>
+        <TableCell className={`stat-figure text-right font-semibold ${edgeColor}`}>
+          {pick.edge > 0 ? "+" : ""}{(pick.edge * 100).toFixed(1)}%
+        </TableCell>
+        <TableCell className="text-right">
+          <span className="stat-figure">{formatAmerican(pick.bestAmerican)}</span>
+          <div className="text-[10px] text-muted-foreground">
+            {pick.bestBook}
+            {canShop && <span className="ml-1">· {pick.allBooks.length} books {open ? "▴" : "▾"}</span>}
+          </div>
+        </TableCell>
+        <TableCell className={`stat-figure text-right font-bold ${evColor}`}>
+          {pick.evPercent > 0 ? "+" : ""}{(pick.evPercent * 100).toFixed(0)}%
+        </TableCell>
+        <TableCell className="stat-figure text-right">
+          {pick.kellyUnits > 0 ? `${pick.kellyUnits}u` : <span className="text-muted-foreground">—</span>}
+        </TableCell>
+      </TableRow>
+
+      {/* Line shopping: every book's price for this player, best first. */}
+      {open && canShop && (
+        <TableRow className="hover:bg-transparent">
+          <TableCell colSpan={7} className="bg-secondary/40">
+            <div className="px-2 py-1">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Line shopping — best price wins
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {pick.allBooks.map((b, i) => (
+                  <span
+                    key={b.bookmaker}
+                    className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${
+                      i === 0 ? "border-confidence-high/40 bg-confidence-high/10" : "border-border bg-card"
+                    }`}
+                  >
+                    <span className="font-medium">{b.bookmaker}</span>
+                    <span className="stat-figure">{formatAmerican(b.american)}</span>
+                    {i === 0 && <span className="text-[10px] font-semibold text-confidence-high">BEST</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </Fragment>
   );
 }
