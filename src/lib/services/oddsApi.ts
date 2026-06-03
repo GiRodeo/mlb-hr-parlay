@@ -25,9 +25,9 @@ type OutcomeRole = "yes" | "no" | null;
 
 /**
  * Fetch best odds per player for a given prop market across the date's MLB
- * slate. Shared by batter_home_runs and batter_first_home_run — they differ
- * only in market key and how YES/NO is detected. Keyed by lowercased player
- * name (The Odds API identifies prop subjects by name, not MLB id).
+ * slate. Parameterized by market key + a YES/NO classifier so it can serve
+ * any player prop. Keyed by lowercased player name (The Odds API identifies
+ * prop subjects by name, not MLB id).
  */
 async function fetchMarketOdds(
   date: string,
@@ -117,13 +117,6 @@ const classifyHrProp = (side: string, point?: number): OutcomeRole => {
   return null;
 };
 
-// batter_first_home_run: Yes/No, no line.
-const classifyFirstHr = (side: string): OutcomeRole => {
-  if (side.includes("yes")) return "yes";
-  if (side.includes("no")) return "no";
-  return null;
-};
-
 // ─── Public entry ───────────────────────────────────────────────────
 
 /** Live "to hit ≥1 HR" odds keyed by lowercased player name. Empty if no key. */
@@ -131,16 +124,6 @@ export async function getLiveHrOddsByName(date: string): Promise<Map<string, Bes
   if (!hasOddsApi) return new Map();
   const entries = await withCache(`odds:hr:${date}`, env.CACHE_TTL_LINEUPS_S, async () => {
     const map = await fetchMarketOdds(date, "batter_home_runs", classifyHrProp);
-    return Array.from(map.entries());
-  });
-  return new Map(entries);
-}
-
-/** Live "first HR of the game" odds keyed by lowercased player name. */
-export async function getFirstHrOddsByName(date: string): Promise<Map<string, BestHrOdds>> {
-  if (!hasOddsApi) return new Map();
-  const entries = await withCache(`odds:firsthr:${date}`, env.CACHE_TTL_LINEUPS_S, async () => {
-    const map = await fetchMarketOdds(date, "batter_first_home_run", classifyFirstHr);
     return Array.from(map.entries());
   });
   return new Map(entries);

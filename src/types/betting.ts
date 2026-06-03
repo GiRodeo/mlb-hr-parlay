@@ -51,28 +51,3 @@ export interface ValueResponse {
   oddsConfigured: boolean;
   picks: ValuePick[];       // sorted by EV desc
 }
-
-// ─── First home run of the game ─────────────────────────────────────
-
-export interface FirstHrPick {
-  playerId: PlayerId;
-  fullName: string;
-  teamAbbr: string;
-  matchup: string;
-  battingOrder: number;
-  firstHrProb: number;          // model P(hits the game's first HR), 0–1
-  // Odds present only when a book posts batter_first_home_run for this player.
-  bestAmerican?: number;
-  bestBook?: string;
-  marketProb?: number;          // de-vigged market prob, when priced
-  edge?: number;                // model − market, when priced
-  evPercent?: number;           // EV per unit staked, when priced
-  positiveEv?: boolean;
-}
-
-export interface FirstHrResponse {
-  date: string;
-  generatedAt: string;
-  oddsAvailable: boolean;       // whether any first-HR odds were priced
-  picks: FirstHrPick[];         // sorted by model firstHrProb desc
-}

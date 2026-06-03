@@ -138,12 +138,6 @@ const SECTIONS: Section[] = [
         detail:
           "The composite is mapped through a calibration curve anchored to the league-average per-game HR rate (~6%). This is the number the betting/value layer uses. IMPORTANT: the curve is hand-tuned and not yet validated against real outcomes (see the calibration chart on the Value page).",
       },
-      {
-        term: "First-HR probability",
-        short: "Chance a batter hits the game's FIRST home run.",
-        detail:
-          "A separate survival model that walks the game's plate appearances in order: each batter is credited with P(no HR yet) × his HR rate at each turn. Rewards early batting-order hitters. Across a game these sum to the chance the game has any HR at all. This is a different event from 'to hit a HR' and is priced against the first-HR market only.",
-      },
     ],
   },
   {
