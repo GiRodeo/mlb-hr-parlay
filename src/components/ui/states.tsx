@@ -1,5 +1,6 @@
 // Shared loading / error / empty states so every page handles async the same
 // way. Skeletons use the muted token for a subtle shimmer-free placeholder.
+"use client";
 import { cn } from "@/lib/utils/cn";
 import { Card, CardContent } from "./card";
 
