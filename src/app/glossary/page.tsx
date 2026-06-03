@@ -223,6 +223,19 @@ const SECTIONS: Section[] = [
         detail:
           "If the model says '12%' should the event happen ~12% of the time? ECE (expected calibration error) and the Brier score measure this. Currently shown on sample data — real calibration needs an accumulated prediction log.",
       },
+      {
+        term: "Units",
+        short: "A bankroll-relative bet size, independent of dollar amount.",
+        detail:
+          "Pros track in units, not dollars, so strategy is comparable across bankroll sizes. The Bankroll tracker starts at 100 units; a '2u' bet risks 2% of the starting bankroll.",
+      },
+      {
+        term: "Max drawdown",
+        short: "The largest peak-to-trough drop in your bankroll.",
+        detail:
+          "Measures the worst losing stretch you'd have endured. Even profitable strategies have drawdowns — knowing yours helps size bets so a bad run doesn't wipe you out. A drawdown over ~25% is a warning sign your stakes are too large.",
+        formula: "max over time of (peak − bankroll) ÷ peak",
+      },
     ],
   },
 ];

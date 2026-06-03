@@ -11,5 +11,6 @@ export * from "./DashboardHero";
 export * from "./ProjectedBanner";
 export * from "./ScoreBreakdown";
 export * from "./ReliabilityChart";
+export * from "./BankrollChart";
 export * from "./WeatherParkSidebar";
 export * from "./FieldDiagram";
