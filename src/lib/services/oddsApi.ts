@@ -25,33 +25,59 @@ interface OddsApiEvent { id: string; home_team: string; away_team: string; bookm
  * API identifies prop subjects by name, not MLB id — the caller name-matches).
  */
 async function fetchLiveOdds(date: string): Promise<Map<string, BestHrOdds>> {
-  // The Odds API: player HR props live under the baseball_mlb sport, market
-  // key "batter_home_runs". Prices are American when oddsFormat=american.
-  const url =
-    `${env.ODDS_API_BASE}/sports/baseball_mlb/odds?` +
-    new URLSearchParams({
-      apiKey: env.ODDS_API_KEY,
-      regions: "us",
-      markets: "batter_home_runs",
-      oddsFormat: "american",
-      dateFormat: "iso",
-    });
-  const events = await httpFetch<OddsApiEvent[]>(url);
+  // IMPORTANT: The Odds API serves player props ONLY via the per-event odds
+  // endpoint, not the bulk /odds endpoint. So we (1) list the day's events,
+  // then (2) request batter_home_runs for each. Verified against the live API.
+  //
+  // Quota note: empty markets (props not posted yet) cost 0 credits; only
+  // events that actually return book data are billed. HR props typically post
+  // a few hours before first pitch, so early-day calls will be empty.
+  const eventsUrl =
+    `${env.ODDS_API_BASE}/sports/baseball_mlb/events?` +
+    new URLSearchParams({ apiKey: env.ODDS_API_KEY, dateFormat: "iso" });
+  const events = await httpFetch<Array<{ id: string; commence_time: string }>>(eventsUrl);
 
-  // Collect every book's YES price per player, plus a NO price if present.
+  // Keep events on the requested date (UTC date of commence_time).
+  const todays = events.filter((e) => e.commence_time.slice(0, 10) === date);
+  const targetEvents = todays.length > 0 ? todays : events; // fall back to all if none match
+
+  // Collect every book's YES (to hit a HR) price per player, plus NO if posted.
   const byPlayer = new Map<string, { yes: Array<{ book: string; price: number }>; no?: number }>();
-  for (const ev of events) {
-    for (const book of ev.bookmakers) {
-      for (const market of book.markets) {
+
+  for (const ev of targetEvents) {
+    const oddsUrl =
+      `${env.ODDS_API_BASE}/sports/baseball_mlb/events/${ev.id}/odds?` +
+      new URLSearchParams({
+        apiKey: env.ODDS_API_KEY,
+        regions: "us",
+        markets: "batter_home_runs",
+        oddsFormat: "american",
+        dateFormat: "iso",
+      });
+    let detail: OddsApiEvent;
+    try {
+      detail = await httpFetch<OddsApiEvent>(oddsUrl);
+    } catch (err) {
+      log.warn("odds: event fetch failed", { eventId: ev.id, err: String(err) });
+      continue;
+    }
+    for (const book of detail.bookmakers ?? []) {
+      for (const market of book.markets ?? []) {
         if (market.key !== "batter_home_runs") continue;
         for (const o of market.outcomes) {
-          const name = (o.description ?? o.name ?? "").toLowerCase();
-          if (!name) continue;
-          const isYes = (o.name ?? "").toLowerCase().includes("over") || (o.name ?? "").toLowerCase().includes("yes");
-          const rec = byPlayer.get(name) ?? { yes: [] };
+          // For HR props the player is in `description`; `name` is the side
+          // ("Over"/"Under" on a 0.5 line, or "Yes"/"No").
+          const player = (o.description ?? "").toLowerCase();
+          if (!player) continue;
+          const side = (o.name ?? "").toLowerCase();
+          // YES = "over" (line 0.5) or explicit "yes". Anything pointing the
+          // other way is the NO side.
+          const isYes = side.includes("over") || side.includes("yes");
+          const isNo = side.includes("under") || side.includes("no");
+          const rec = byPlayer.get(player) ?? { yes: [] };
           if (isYes) rec.yes.push({ book: book.title, price: o.price });
-          else rec.no = o.price;
-          byPlayer.set(name, rec);
+          else if (isNo) rec.no = o.price;
+          byPlayer.set(player, rec);
         }
       }
     }
