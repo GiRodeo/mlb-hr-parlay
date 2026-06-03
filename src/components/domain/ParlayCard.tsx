@@ -75,12 +75,29 @@ export function ParlayCard({ parlay, featured = false, className }: ParlayCardPr
                   {leg.teamAbbr} · {leg.matchup}
                 </div>
               </div>
-              <span className="stat-figure text-xs text-muted-foreground">
-                {formatAmericanOdds(leg.americanOdds)}
-              </span>
+              {/* Per-leg HR probability + fair odds, so the parlay's combined
+                  probability (the product of these) is transparent. */}
+              <div className="flex flex-col items-end leading-tight">
+                <span className="stat-figure text-xs font-semibold">
+                  {(leg.impliedHrProbability * 100).toFixed(1)}% HR
+                </span>
+                <span className="stat-figure text-[11px] text-muted-foreground">
+                  {formatAmericanOdds(leg.americanOdds)}
+                </span>
+              </div>
               <ConfidenceBadge score={leg.composite} showLabel={false} size="sm" />
             </Link>
           ))}
+        </div>
+
+        {/* Make the multiplication explicit: leg1% × leg2% × … = combined */}
+        <div className="mt-2 rounded-md bg-secondary/50 px-2.5 py-1.5 text-center text-[11px] text-muted-foreground">
+          {parlay.legs.map((l) => `${(l.impliedHrProbability * 100).toFixed(1)}%`).join(" × ")}
+          {" = "}
+          <span className="stat-figure font-semibold text-foreground">
+            {(parlay.combinedProbability * 100).toFixed(1)}%
+          </span>{" "}
+          combined
         </div>
 
         <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">

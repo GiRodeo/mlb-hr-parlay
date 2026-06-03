@@ -58,9 +58,16 @@ export function formatAmericanOdds(odds: number): string {
   return odds > 0 ? `+${odds}` : `${odds}`;
 }
 
-/** Convert a 0–1 probability to American odds (fair, no vig). */
+/**
+ * Convert a 0–1 probability to American odds (fair, no vig).
+ *
+ * The lower clamp is intentionally tiny (0.05%) rather than 1%: multi-leg
+ * parlays legitimately have hit probabilities well under 1%, and a 1% floor
+ * collapsed every longshot parlay to the same +9900. The floor now only
+ * guards against div-by-zero / absurd values at the extreme tail.
+ */
 export function probabilityToAmericanOdds(p: number): number {
-  const clamped = Math.min(0.99, Math.max(0.01, p));
+  const clamped = Math.min(0.999, Math.max(0.0005, p));
   if (clamped >= 0.5) return Math.round((-clamped / (1 - clamped)) * 100);
   return Math.round(((1 - clamped) / clamped) * 100);
 }
