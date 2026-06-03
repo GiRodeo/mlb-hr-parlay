@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
-import { useUiStore } from "@/stores/uiStore";
+import { DateNavigator } from "./DateNavigator";
 
 const LINKS = [
   { href: "/", label: "Today" },
@@ -14,7 +14,6 @@ const LINKS = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const selectedDate = useUiStore((s) => s.selectedDate);
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
@@ -44,15 +43,7 @@ export function Navbar() {
             ))}
           </nav>
         </div>
-        <div className="hidden items-center gap-2 sm:flex">
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium">
-            {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        </div>
+        <DateNavigator />
       </div>
     </header>
   );

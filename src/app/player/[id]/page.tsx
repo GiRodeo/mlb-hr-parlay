@@ -14,6 +14,7 @@ import { PlayerAvatar } from "@/components/domain/PlayerAvatar";
 import { ConfidenceRing } from "@/components/domain/ConfidenceRing";
 import { StatBar } from "@/components/domain/StatBar";
 import { TrendChart } from "@/components/domain/TrendChart";
+import { ProjectedBanner } from "@/components/domain/ProjectedBanner";
 import { ParkFactorBadge } from "@/components/domain/ParkFactorBadge";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState, EmptyState, Skeleton } from "@/components/ui/states";
@@ -57,6 +58,8 @@ function Profile({ score }: { score: import("@/types").Score }) {
 
   return (
     <>
+      {d.projected && <ProjectedBanner className="mt-3" />}
+
       {/* header */}
       <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_auto]">
         <Card>

@@ -33,6 +33,9 @@ export interface Parlay {
 export interface DailyParlayBundle {
   date: string;                      // YYYY-MM-DD
   generatedAt: string;               // ISO datetime
+  // True when the slate is built from PROJECTED lineups (e.g. looking ahead
+  // to a future date before official lineups post). UI shows a banner.
+  projected: boolean;
   twoLeg: Parlay[];
   threeLeg: Parlay[];
   fourLeg: Parlay[];

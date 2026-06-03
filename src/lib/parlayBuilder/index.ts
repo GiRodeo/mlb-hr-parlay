@@ -38,9 +38,15 @@ export function buildDailyParlays(
     .sort((a, b) => b.composite - a.composite)
     .slice(0, RULES.CANDIDATE_POOL_SIZE);
 
+  // Slate is "projected" if most of the eligible pool came from projected
+  // lineups (i.e. looking ahead before official lineups posted).
+  const projectedCount = eligible.filter((c) => c.display.projected).length;
+  const projected = eligible.length > 0 && projectedCount >= eligible.length / 2;
+
   return {
     date: opts.date,
     generatedAt: opts.generatedAtIso ?? new Date(0).toISOString().replace(/.+/, "1970-01-01T00:00:00.000Z"),
+    projected,
     twoLeg: buildBucket(eligible, 2),
     threeLeg: buildBucket(eligible, 3),
     fourLeg: buildBucket(eligible, 4),

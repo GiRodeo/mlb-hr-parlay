@@ -69,17 +69,37 @@ async function buildContextsForGame(
   const lineups = await mlb.getLineups(g.gameId);
 
   const out: Array<PlayerGameContext & { teamId: TeamId }> = [];
-  for (const side of [lineups.home, lineups.away]) {
-    if (!side.confirmed) continue;       // skip projected lineups for now
-    if (!side.opposingPitcherId) continue;
+  // Build each side: home bats vs away's pitcher, and vice-versa.
+  const sides = [
+    { lineup: lineups.home, teamId: g.homeTeamId, oppTeamId: g.awayTeamId, isHome: true,
+      probablePitcherId: g.awayProbablePitcherId },
+    { lineup: lineups.away, teamId: g.awayTeamId, oppTeamId: g.homeTeamId, isHome: false,
+      probablePitcherId: g.homeProbablePitcherId },
+  ];
 
-    // The opponent club is whichever side this batting team is NOT.
-    const opponentTeamId = (side.isHome ? g.awayTeamId : g.homeTeamId);
+  for (const s of sides) {
+    // Slots: use confirmed lineup if present, else project from a recent game.
+    let slots = s.lineup.confirmed ? s.lineup.slots : [];
+    let projected = false;
+    if (slots.length === 0) {
+      slots = await mlb.getProjectedSlots(s.teamId as unknown as number, date);
+      projected = true;
+    }
+    if (slots.length === 0) continue;    // no confirmed AND no projection → skip
 
-    const pAdv = pitcherFG.get(side.opposingPitcherId) ?? blankPitcherAdvanced(side.opposingPitcherId);
-    const pCast = pitcherCast.get(side.opposingPitcherId) ?? blankPitcherStatcast(side.opposingPitcherId);
+    // Opposing pitcher: prefer the confirmed-boxscore starter, else the
+    // scheduled probable pitcher (available for future games).
+    const oppPitcherId =
+      (s.lineup.confirmed ? s.lineup.opposingPitcherId : undefined) ?? s.probablePitcherId;
+    if (!oppPitcherId) continue;         // no pitcher info at all → can't score matchup
 
-    for (const slot of side.slots) {
+    const oppPitcherIdNum = oppPitcherId as unknown as number;
+    const pAdv = pitcherFG.get(oppPitcherIdNum) ?? blankPitcherAdvanced(oppPitcherIdNum);
+    const pCast = pitcherCast.get(oppPitcherIdNum) ?? blankPitcherStatcast(oppPitcherIdNum);
+    const oppHand = (s.lineup.confirmed ? s.lineup.opposingPitcherHand : undefined) ?? "R";
+    const oppName = (s.lineup.confirmed ? s.lineup.opposingPitcherName : undefined) ?? "";
+
+    for (const slot of slots) {
       const bCast = batterCast.get(slot.playerId);
       if (!bCast) continue;              // not enough Statcast data → skip
 
@@ -87,20 +107,21 @@ async function buildContextsForGame(
       out.push({
         playerId: slot.playerId,
         fullName: slot.fullName,
-        teamId: side.teamId,
-        opponentTeamId,
+        teamId: s.teamId,
+        opponentTeamId: s.oppTeamId,
         position: slot.positionAbbr,
         gameId: g.gameId,
-        isHome: side.isHome,
+        isHome: s.isHome,
         battingOrder: slot.battingOrder,
         batSide: slot.batSide,
+        projected,
 
         splits,
         statcastBatter: bCast,
 
-        opposingPitcherId: side.opposingPitcherId,
-        opposingPitcherName: side.opposingPitcherName ?? "",
-        opposingPitcherHand: side.opposingPitcherHand ?? "R",
+        opposingPitcherId: oppPitcherId,
+        opposingPitcherName: oppName,
+        opposingPitcherHand: oppHand,
         pitcherAdvanced: pAdv,
         pitcherStatcast: pCast,
 

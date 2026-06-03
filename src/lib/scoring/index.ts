@@ -33,6 +33,7 @@ function buildDisplay(ctx: PlayerGameContext): ScoreDisplay {
     position: ctx.position,
     batSide: ctx.batSide,
     isHome: ctx.isHome,
+    projected: ctx.projected,
     opponentName: opp.name,
     matchup: `${ctx.isHome ? "vs" : "@"} ${opp.abbr}`,
 

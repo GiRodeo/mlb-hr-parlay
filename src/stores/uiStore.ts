@@ -4,6 +4,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { shiftIso, todayIso } from "@/lib/utils/dates";
 
 export type LegBucket = "two" | "three" | "four";
 
@@ -12,6 +13,8 @@ interface UiState {
   expandedBucket: LegBucket;
   showRationale: boolean;
   setSelectedDate: (d: string) => void;
+  stepDate: (days: number) => void;        // +1 = tomorrow, -1 = yesterday
+  goToday: () => void;
   setExpandedBucket: (b: LegBucket) => void;
   toggleRationale: () => void;
 }
@@ -19,13 +22,20 @@ interface UiState {
 export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
-      selectedDate: new Date().toISOString().slice(0, 10),
+      selectedDate: todayIso(),
       expandedBucket: "three",
       showRationale: true,
       setSelectedDate: (d) => set({ selectedDate: d }),
+      stepDate: (days) => set((s) => ({ selectedDate: shiftIso(s.selectedDate, days) })),
+      goToday: () => set({ selectedDate: todayIso() }),
       setExpandedBucket: (b) => set({ expandedBucket: b }),
       toggleRationale: () => set((s) => ({ showRationale: !s.showRationale })),
     }),
-    { name: "mlb-hr-parlay-ui" },
+    {
+      name: "mlb-hr-parlay-ui",
+      // Don't persist selectedDate — always start on the real "today" each
+      // visit, so a stale saved date can't strand the user on an old day.
+      partialize: (s) => ({ expandedBucket: s.expandedBucket, showRationale: s.showRationale }),
+    },
   ),
 );

@@ -11,6 +11,7 @@ import { DashboardHero } from "@/components/domain/DashboardHero";
 import { PlayerCard } from "@/components/domain/PlayerCard";
 import { ParlayCard } from "@/components/domain/ParlayCard";
 import { WeatherParkSidebar } from "@/components/domain/WeatherParkSidebar";
+import { ProjectedBanner } from "@/components/domain/ProjectedBanner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CardGridSkeleton, ErrorState, EmptyState, Skeleton } from "@/components/ui/states";
 import type { Parlay } from "@/types";
@@ -26,8 +27,13 @@ export default function DashboardPage() {
   const topParlay =
     parlays.data?.twoLeg[0] ?? parlays.data?.threeLeg[0] ?? parlays.data?.fourLeg[0];
 
+  const isProjected = parlays.data?.projected ?? false;
+
   return (
     <PageContainer>
+      {/* Projected-lineup notice when looking ahead before official lineups */}
+      {isProjected && <ProjectedBanner className="mb-4" />}
+
       {/* Hero — show a skeleton band while the first load is in flight */}
       {parlays.isLoading ? (
         <Skeleton className="h-64 w-full rounded-xl" />

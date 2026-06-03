@@ -100,6 +100,37 @@ function parseLineup(
   };
 }
 
+// ─── Projected lineups (look-ahead before official lineups post) ────
+
+/**
+ * Best-effort projected batting order for `teamId` as of `date`: we take the
+ * team's most recent COMPLETED game before `date` and reuse that lineup's
+ * batting order. Returns the 9 slots only (no opposing-pitcher context — the
+ * caller pairs it with the scheduled game's probable pitcher). Empty if no
+ * recent game is found.
+ *
+ * This is how "tomorrow" gets populated before MLB posts official cards.
+ */
+export async function getProjectedSlots(teamId: number, date: string): Promise<LineupSlot[]> {
+  const key = `mlb:projected:${teamId}:${date}`;
+  return withCache(key, env.CACHE_TTL_LINEUPS_S, async () => {
+    // Look back up to 10 days for the team's last game.
+    const start = shiftDate(date, -10);
+    const end = shiftDate(date, -1);
+    const url =
+      `${env.MLB_STATS_API_BASE}/schedule?sportId=1&teamId=${teamId}` +
+      `&startDate=${start}&endDate=${end}`;
+    const raw = await httpFetch<MlbScheduleResponse>(url);
+    const games = raw.dates.flatMap((d) => d.games).filter((g) => g.status.abstractGameState === "Final");
+    if (games.length === 0) return [];
+    // Most recent final game.
+    const last = games.sort((a, b) => b.gameDate.localeCompare(a.gameDate))[0]!;
+    const lineups = await getLineups(last.gamePk);
+    const side = lineups.home.teamId === asTeamId(teamId) ? lineups.home : lineups.away;
+    return side.slots;
+  });
+}
+
 // ─── Player batting splits (rolling windows) ────────────────────────
 
 /**

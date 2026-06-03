@@ -8,5 +8,6 @@ export * from "./PlayerCard";
 export * from "./ParlayCard";
 export * from "./PlayerAvatar";
 export * from "./DashboardHero";
+export * from "./ProjectedBanner";
 export * from "./WeatherParkSidebar";
 export * from "./FieldDiagram";

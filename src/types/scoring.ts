@@ -18,6 +18,7 @@ export interface PlayerGameContext {
   isHome: boolean;
   battingOrder: number;
   batSide: Handedness;
+  projected: boolean;                    // lineup projected vs officially confirmed
 
   splits: BattingSplit[];                // 7d, 14d, 30d, season
   statcastBatter: BatterStatcast;
@@ -64,6 +65,10 @@ export interface ScoreDisplay {
   position: string;            // "RF", "DH", …
   batSide: Handedness;
   isHome: boolean;
+  // True when this player's lineup slot is PROJECTED (from a recent game)
+  // rather than an officially confirmed lineup — e.g. looking ahead to a
+  // future date before lineups are posted.
+  projected: boolean;
   opponentName: string;        // opposing team display name
   matchup: string;             // "vs BOS" / "@ COL" — precomputed for cards
 
