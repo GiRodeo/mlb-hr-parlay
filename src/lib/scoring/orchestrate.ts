@@ -10,6 +10,7 @@ import { env } from "@/lib/utils/env";
 import { log } from "@/lib/utils/logger";
 import { mlb, savant, fangraphs, weather, parks } from "@/lib/services";
 import { scoreAndRank } from "@/lib/scoring";
+import { mapWithConcurrency } from "@/lib/utils/concurrency";
 import type { PlayerGameContext, ScheduledGame, Score, TeamId } from "@/types";
 
 export interface DailyScoredPlayer extends Score {
@@ -33,19 +34,20 @@ export async function getDailyScoredPlayers(date: string): Promise<DailyScoredPl
       fangraphs.getPitcherAdvancedSeason(season),
     ]);
 
-    const contexts: Array<PlayerGameContext & { teamId: TeamId }> = [];
-    for (const g of games) {
-      if (g.state === "Final") continue;
+    // Build games CONCURRENTLY (bounded) instead of one-at-a-time. Cap at 6
+    // games in flight so we parallelize for speed without hammering MLB into
+    // rate-limiting us.
+    const playable = games.filter((g) => g.state !== "Final");
+    const perGame = await mapWithConcurrency(playable, 6, async (g) => {
       try {
-        const ctxsForGame = await buildContextsForGame(
-          g, date, batterCast, pitcherCast, pitcherFG,
-        );
-        contexts.push(...ctxsForGame);
+        return await buildContextsForGame(g, date, batterCast, pitcherCast, pitcherFG);
       } catch (err) {
         // One bad game shouldn't break the whole slate.
         log.warn("game build failed", { gameId: g.gameId, err: String(err) });
+        return [];
       }
-    }
+    });
+    const contexts = perGame.flat();
 
     const scored = scoreAndRank(contexts);
     // Re-attach teamId — not part of the Score shape but needed by the parlay builder.
@@ -77,7 +79,9 @@ async function buildContextsForGame(
       probablePitcherId: g.homeProbablePitcherId },
   ];
 
-  for (const s of sides) {
+  // Process both sides concurrently; within a side, fetch batter splits with
+  // bounded concurrency so a 9-man lineup doesn't run as 9 serial calls.
+  const perSide = await Promise.all(sides.map(async (s) => {
     // Slots: use confirmed lineup if present, else project from a recent game.
     let slots = s.lineup.confirmed ? s.lineup.slots : [];
     let projected = false;
@@ -85,13 +89,13 @@ async function buildContextsForGame(
       slots = await mlb.getProjectedSlots(s.teamId as unknown as number, date);
       projected = true;
     }
-    if (slots.length === 0) continue;    // no confirmed AND no projection → skip
+    if (slots.length === 0) return [];   // no confirmed AND no projection → skip
 
     // Opposing pitcher: prefer the confirmed-boxscore starter, else the
     // scheduled probable pitcher (available for future games).
     const oppPitcherId =
       (s.lineup.confirmed ? s.lineup.opposingPitcherId : undefined) ?? s.probablePitcherId;
-    if (!oppPitcherId) continue;         // no pitcher info at all → can't score matchup
+    if (!oppPitcherId) return [];        // no pitcher info at all → can't score matchup
 
     const oppPitcherIdNum = oppPitcherId as unknown as number;
     const pAdv = pitcherFG.get(oppPitcherIdNum) ?? blankPitcherAdvanced(oppPitcherIdNum);
@@ -99,12 +103,12 @@ async function buildContextsForGame(
     const oppHand = (s.lineup.confirmed ? s.lineup.opposingPitcherHand : undefined) ?? "R";
     const oppName = (s.lineup.confirmed ? s.lineup.opposingPitcherName : undefined) ?? "";
 
-    for (const slot of slots) {
-      const bCast = batterCast.get(slot.playerId);
-      if (!bCast) continue;              // not enough Statcast data → skip
-
+    // Only batters with Statcast data are scorable.
+    const scorable = slots.filter((slot) => batterCast.has(slot.playerId));
+    const ctxs = await mapWithConcurrency(scorable, 8, async (slot) => {
+      const bCast = batterCast.get(slot.playerId)!;
       const splits = await mlb.getBattingSplits(slot.playerId, date);
-      out.push({
+      const ctx: PlayerGameContext & { teamId: TeamId } = {
         playerId: slot.playerId,
         fullName: slot.fullName,
         teamId: s.teamId,
@@ -127,9 +131,13 @@ async function buildContextsForGame(
 
         park,
         weather: w,
-      });
-    }
-  }
+      };
+      return ctx;
+    });
+    return ctxs;
+  }));
+
+  out.push(...perSide.flat());
   return out;
 }
 

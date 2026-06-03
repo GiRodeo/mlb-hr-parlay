@@ -145,20 +145,22 @@ export async function getBattingSplits(
 ): Promise<BattingSplit[]> {
   const key = `mlb:splits:${playerId}:${asOfDate}:${windows.join(",")}`;
   return withCache(key, env.CACHE_TTL_LINEUPS_S, async () => {
-    const out: BattingSplit[] = [];
-    for (const w of windows) {
+    // Fire all window requests + the season request CONCURRENTLY rather than
+    // one-at-a-time — this is the single biggest per-player speedup, since a
+    // batter's 4 calls no longer block each other.
+    const windowReqs = windows.map(async (w) => {
       const start = shiftDate(asOfDate, -w);
       const url = `${env.MLB_STATS_API_BASE}/people/${playerId}/stats?stats=byDateRange&group=hitting&startDate=${start}&endDate=${asOfDate}`;
       const raw = await httpFetch<MlbPlayerStatsResponse>(url);
-      const split = raw.stats[0]?.splits[0]?.stat;
-      out.push(toBattingSplit(split, w));
-    }
-    // Season total
-    const seasonUrl = `${env.MLB_STATS_API_BASE}/people/${playerId}/stats?stats=season&group=hitting`;
-    const seasonRaw = await httpFetch<MlbPlayerStatsResponse>(seasonUrl);
-    const seasonStat = seasonRaw.stats[0]?.splits[0]?.stat;
-    out.push(toBattingSplit(seasonStat, "season"));
-    return out;
+      return toBattingSplit(raw.stats[0]?.splits[0]?.stat, w);
+    });
+    const seasonReq = (async () => {
+      const url = `${env.MLB_STATS_API_BASE}/people/${playerId}/stats?stats=season&group=hitting`;
+      const raw = await httpFetch<MlbPlayerStatsResponse>(url);
+      return toBattingSplit(raw.stats[0]?.splits[0]?.stat, "season");
+    })();
+
+    return Promise.all([...windowReqs, seasonReq]);
   });
 }
 
