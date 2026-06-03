@@ -63,15 +63,24 @@ async function fetchLiveOdds(date: string): Promise<Map<string, BestHrOdds>> {
     }
     for (const book of detail.bookmakers ?? []) {
       for (const market of book.markets ?? []) {
+        // ONLY batter_home_runs — NOT batter_first_home_run. "First HR of the
+        // game" is a different, much rarer event (one winner per game) and must
+        // never be compared against our P(≥1 HR) model.
         if (market.key !== "batter_home_runs") continue;
         for (const o of market.outcomes) {
           // For HR props the player is in `description`; `name` is the side
-          // ("Over"/"Under" on a 0.5 line, or "Yes"/"No").
+          // ("Over"/"Under"); `point` is the line.
           const player = (o.description ?? "").toLowerCase();
           if (!player) continue;
+
+          // CRITICAL: only the 0.5 line means "to hit at least 1 HR" — which
+          // is what our model predicts. Books may also post Over 1.5 ("2+
+          // HRs"); including those would compare apples to oranges and invent
+          // fake edge. Accept point===0.5, or a missing point (some books omit
+          // it for the standard market).
+          if (o.point !== undefined && o.point !== 0.5) continue;
+
           const side = (o.name ?? "").toLowerCase();
-          // YES = "over" (line 0.5) or explicit "yes". Anything pointing the
-          // other way is the NO side.
           const isYes = side.includes("over") || side.includes("yes");
           const isNo = side.includes("under") || side.includes("no");
           const rec = byPlayer.get(player) ?? { yes: [] };
