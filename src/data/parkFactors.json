@@ -1,0 +1,38 @@
+{
+  "_meta": {
+    "note": "Approximate park factors and orientations for all 30 MLB venues. HR indices are realistic estimates (league avg = 100), NOT a live pull from Statcast's park-factors leaderboard. cfBearingDeg is the compass heading from home plate to dead-center, used to project wind onto the to-CF axis. Lat/lon are venue locations for the weather lookup. Refresh hrIndex* each season from https://baseballsavant.mlb.com/leaderboard/statcast-park-factors before relying on them.",
+    "leagueAverage": 100
+  },
+  "parks": [
+    { "venueId": 1, "venueName": "Angel Stadium", "cfBearingDeg": 45, "latitude": 33.8003, "longitude": -117.8827, "hrIndex": 102, "hrIndexVsLhb": 101, "hrIndexVsRhb": 103, "altitudeFeet": 153 },
+    { "venueId": 15, "venueName": "Chase Field", "cfBearingDeg": 0, "latitude": 33.4455, "longitude": -112.0667, "hrIndex": 103, "hrIndexVsLhb": 104, "hrIndexVsRhb": 102, "altitudeFeet": 1059 },
+    { "venueId": 2, "venueName": "Oriole Park at Camden Yards", "cfBearingDeg": 32, "latitude": 39.2839, "longitude": -76.6217, "hrIndex": 99, "hrIndexVsLhb": 102, "hrIndexVsRhb": 96, "altitudeFeet": 36 },
+    { "venueId": 3, "venueName": "Fenway Park", "cfBearingDeg": 52, "latitude": 42.3467, "longitude": -71.0972, "hrIndex": 97, "hrIndexVsLhb": 95, "hrIndexVsRhb": 99, "altitudeFeet": 20 },
+    { "venueId": 17, "venueName": "Wrigley Field", "cfBearingDeg": 28, "latitude": 41.9484, "longitude": -87.6553, "hrIndex": 104, "hrIndexVsLhb": 105, "hrIndexVsRhb": 103, "altitudeFeet": 595 },
+    { "venueId": 4, "venueName": "Guaranteed Rate Field", "cfBearingDeg": 18, "latitude": 41.83, "longitude": -87.6339, "hrIndex": 107, "hrIndexVsLhb": 106, "hrIndexVsRhb": 108, "altitudeFeet": 595 },
+    { "venueId": 2602, "venueName": "Great American Ball Park", "cfBearingDeg": 30, "latitude": 39.0975, "longitude": -84.5069, "hrIndex": 118, "hrIndexVsLhb": 116, "hrIndexVsRhb": 119, "altitudeFeet": 490 },
+    { "venueId": 5, "venueName": "Progressive Field", "cfBearingDeg": 0, "latitude": 41.4962, "longitude": -81.6852, "hrIndex": 98, "hrIndexVsLhb": 97, "hrIndexVsRhb": 99, "altitudeFeet": 660 },
+    { "venueId": 19, "venueName": "Coors Field", "cfBearingDeg": 0, "latitude": 39.7559, "longitude": -104.9942, "hrIndex": 128, "hrIndexVsLhb": 124, "hrIndexVsRhb": 131, "altitudeFeet": 5211 },
+    { "venueId": 2394, "venueName": "Comerica Park", "cfBearingDeg": 28, "latitude": 42.339, "longitude": -83.0485, "hrIndex": 94, "hrIndexVsLhb": 93, "hrIndexVsRhb": 95, "altitudeFeet": 600 },
+    { "venueId": 2392, "venueName": "Minute Maid Park", "cfBearingDeg": 345, "latitude": 29.7572, "longitude": -95.3556, "hrIndex": 109, "hrIndexVsLhb": 107, "hrIndexVsRhb": 110, "altitudeFeet": 50 },
+    { "venueId": 7, "venueName": "Kauffman Stadium", "cfBearingDeg": 28, "latitude": 39.0517, "longitude": -94.4803, "hrIndex": 95, "hrIndexVsLhb": 96, "hrIndexVsRhb": 94, "altitudeFeet": 750 },
+    { "venueId": 22, "venueName": "Dodger Stadium", "cfBearingDeg": 22, "latitude": 34.0739, "longitude": -118.24, "hrIndex": 106, "hrIndexVsLhb": 104, "hrIndexVsRhb": 108, "altitudeFeet": 512 },
+    { "venueId": 4169, "venueName": "loanDepot park", "cfBearingDeg": 32, "latitude": 25.7781, "longitude": -80.2197, "hrIndex": 92, "hrIndexVsLhb": 91, "hrIndexVsRhb": 93, "altitudeFeet": 10 },
+    { "venueId": 32, "venueName": "American Family Field", "cfBearingDeg": 6, "latitude": 43.028, "longitude": -87.9712, "hrIndex": 105, "hrIndexVsLhb": 106, "hrIndexVsRhb": 104, "altitudeFeet": 635 },
+    { "venueId": 3312, "venueName": "Target Field", "cfBearingDeg": 8, "latitude": 44.9817, "longitude": -93.2776, "hrIndex": 99, "hrIndexVsLhb": 98, "hrIndexVsRhb": 100, "altitudeFeet": 815 },
+    { "venueId": 3289, "venueName": "Citi Field", "cfBearingDeg": 22, "latitude": 40.7571, "longitude": -73.8458, "hrIndex": 96, "hrIndexVsLhb": 98, "hrIndexVsRhb": 95, "altitudeFeet": 20 },
+    { "venueId": 3313, "venueName": "Yankee Stadium", "cfBearingDeg": 24, "latitude": 40.8296, "longitude": -73.9262, "hrIndex": 121, "hrIndexVsLhb": 131, "hrIndexVsRhb": 110, "altitudeFeet": 55 },
+    { "venueId": 10, "venueName": "Oakland Coliseum", "cfBearingDeg": 60, "latitude": 37.7516, "longitude": -122.2005, "hrIndex": 89, "hrIndexVsLhb": 88, "hrIndexVsRhb": 90, "altitudeFeet": 13 },
+    { "venueId": 2681, "venueName": "Citizens Bank Park", "cfBearingDeg": 10, "latitude": 39.9061, "longitude": -75.1665, "hrIndex": 112, "hrIndexVsLhb": 113, "hrIndexVsRhb": 111, "altitudeFeet": 39 },
+    { "venueId": 31, "venueName": "PNC Park", "cfBearingDeg": 60, "latitude": 40.4469, "longitude": -80.0057, "hrIndex": 93, "hrIndexVsLhb": 95, "hrIndexVsRhb": 91, "altitudeFeet": 730 },
+    { "venueId": 2680, "venueName": "Petco Park", "cfBearingDeg": 32, "latitude": 32.7073, "longitude": -117.157, "hrIndex": 95, "hrIndexVsLhb": 94, "hrIndexVsRhb": 96, "altitudeFeet": 62 },
+    { "venueId": 2395, "venueName": "Oracle Park", "cfBearingDeg": 90, "latitude": 37.7786, "longitude": -122.3893, "hrIndex": 84, "hrIndexVsLhb": 78, "hrIndexVsRhb": 90, "altitudeFeet": 12 },
+    { "venueId": 680, "venueName": "T-Mobile Park", "cfBearingDeg": 0, "latitude": 47.5914, "longitude": -122.3325, "hrIndex": 91, "hrIndexVsLhb": 89, "hrIndexVsRhb": 93, "altitudeFeet": 134 },
+    { "venueId": 2889, "venueName": "Busch Stadium", "cfBearingDeg": 350, "latitude": 38.6226, "longitude": -90.1928, "hrIndex": 97, "hrIndexVsLhb": 96, "hrIndexVsRhb": 98, "altitudeFeet": 466 },
+    { "venueId": 12, "venueName": "Tropicana Field", "cfBearingDeg": 45, "latitude": 27.7683, "longitude": -82.6534, "hrIndex": 96, "hrIndexVsLhb": 97, "hrIndexVsRhb": 95, "altitudeFeet": 15 },
+    { "venueId": 13, "venueName": "Globe Life Field", "cfBearingDeg": 0, "latitude": 32.7473, "longitude": -97.0847, "hrIndex": 101, "hrIndexVsLhb": 100, "hrIndexVsRhb": 102, "altitudeFeet": 545 },
+    { "venueId": 14, "venueName": "Rogers Centre", "cfBearingDeg": 0, "latitude": 43.6414, "longitude": -79.3894, "hrIndex": 103, "hrIndexVsLhb": 104, "hrIndexVsRhb": 102, "altitudeFeet": 251 },
+    { "venueId": 3309, "venueName": "Nationals Park", "cfBearingDeg": 30, "latitude": 38.873, "longitude": -77.0074, "hrIndex": 100, "hrIndexVsLhb": 101, "hrIndexVsRhb": 99, "altitudeFeet": 25 },
+    { "venueId": 4705, "venueName": "Truist Park", "cfBearingDeg": 24, "latitude": 33.8907, "longitude": -84.4677, "hrIndex": 103, "hrIndexVsLhb": 102, "hrIndexVsRhb": 104, "altitudeFeet": 1050 }
+  ]
+}

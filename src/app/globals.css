@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Design language: clean consumer sports app (ESPN / The Athletic).
+  Light mode is the default and only theme for now.
+
+  Palette (hex → HSL):
+    navy   #0F2044 → 221 64% 16%   headers, key CTAs
+    green  #00C853 → 145 100% 39%  high confidence / positive
+    amber  #FFB300 → 42 100% 50%   medium confidence
+    red    #E53935 → 1 77% 55%     low confidence / avoid
+    bg     #F8F9FA → 210 17% 98%   page background
+    card   #FFFFFF → 0 0% 100%     surfaces
+*/
+
+@layer base {
+  :root {
+    /* shadcn semantic tokens, mapped to our palette */
+    --background: 210 17% 98%;
+    --foreground: 221 39% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 221 39% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 221 39% 11%;
+
+    /* primary = deep navy */
+    --primary: 221 64% 16%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 17% 95%;
+    --secondary-foreground: 221 39% 16%;
+
+    --muted: 210 16% 93%;
+    --muted-foreground: 215 16% 42%;
+
+    --accent: 145 100% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 1 77% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 89%;
+    --input: 214 20% 89%;
+    --ring: 221 64% 16%;
+
+    --radius: 0.625rem;
+
+    /* confidence scale — used by ConfidenceBadge / rings / bars */
+    --confidence-high: 145 100% 39%;   /* green  */
+    --confidence-med: 42 100% 50%;     /* amber  */
+    --confidence-low: 1 77% 55%;       /* red    */
+
+    /* brand navy ramp for headers / hero */
+    --navy: 221 64% 16%;
+    --navy-foreground: 210 40% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+    font-variation-settings: "opsz" 32;
+  }
+  /* Tabular, monospace figures for any stat number */
+  .stat-figure {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+}
