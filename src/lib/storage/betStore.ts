@@ -38,7 +38,8 @@ export function makeBet(input: NewBetInput, nowIso: string): BetRecord {
 // ─── In-memory (seeded) ─────────────────────────────────────────────
 
 class MemoryBetStore implements BetStore {
-  private rows: BetRecord[] = [...SEED];
+  // Starts EMPTY — "My Bets" only ever contains what the user logs via Add Bet.
+  private rows: BetRecord[] = [];
   async list() {
     return [...this.rows].sort(
       (a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt),
@@ -70,12 +71,10 @@ class PostgresBetStore implements BetStore {
             settled_at TEXT,
             note TEXT
           )`;
-        // Seed the demo bankroll history once, only when the table is empty.
-        const { rows } = await this.sql`SELECT COUNT(*)::int AS n FROM bets`;
-        if (Number(rows[0]?.n ?? 0) === 0) {
-          log.info("seeding empty bets table", { rows: SEED.length });
-          for (const b of SEED) await this.insert(b);
-        }
+        // No seeding — "My Bets" contains only the user's own logged bets.
+        // One-time cleanup: remove any demo rows seeded by an earlier version
+        // (their ids are prefixed "seed-"). Real user bets are never matched.
+        await this.sql`DELETE FROM bets WHERE id LIKE 'seed-%'`;
       })();
     }
     return this.ready;
@@ -135,35 +134,4 @@ async function make(): Promise<BetStore> {
 export function betStore(): Promise<BetStore> {
   if (!_promise) _promise = make();
   return _promise;
-}
-
-// ─── Seed (deterministic, illustrative) ─────────────────────────────
-// A believable run of settled bets so the bankroll chart renders in dev.
-// Net slightly negative — honest for HR betting.
-const SEED: BetRecord[] = [
-  mkSeed("2026-05-28", "Aaron Judge HR", 240, 2, "won"),
-  mkSeed("2026-05-28", "Pete Alonso HR", 360, 1.5, "lost"),
-  mkSeed("2026-05-29", "Ohtani + Betts (2-leg)", 1100, 1, "lost"),
-  mkSeed("2026-05-29", "Kyle Schwarber HR", 280, 1.5, "lost"),
-  mkSeed("2026-05-30", "Yordan Alvarez HR", 300, 2, "lost"),
-  mkSeed("2026-05-30", "Mookie Betts HR", 340, 1, "won"),
-  mkSeed("2026-05-31", "Aaron Judge HR", 250, 2, "lost"),
-  mkSeed("2026-05-31", "Teoscar Hernández HR", 310, 1.5, "lost"),
-  mkSeed("2026-06-01", "Judge + Soto (2-leg)", 900, 1, "lost"),
-  mkSeed("2026-06-01", "Pete Alonso HR", 330, 1.5, "lost"),
-  mkSeed("2026-06-02", "Shohei Ohtani HR", 250, 2, "won"),
-  mkSeed("2026-06-02", "Juan Soto HR", 330, 1.5, "lost"),
-  mkSeed("2026-06-03", "Aaron Judge HR", 230, 2, "pending"),
-];
-
-function mkSeed(date: string, label: string, odds: number, stake: number, result: BetRecord["result"]): BetRecord {
-  const rec: BetRecord = {
-    id: `seed-${date}-${label}`.replace(/[^a-zA-Z0-9-]/g, ""),
-    date, label, americanOdds: odds, stakeUnits: stake, result,
-    profitUnits: null,
-    createdAt: `${date}T15:00:00.000Z`,
-    settledAt: result === "pending" ? null : `${date}T23:30:00.000Z`,
-  };
-  if (result !== "pending") rec.profitUnits = realizedProfit(rec);
-  return rec;
 }
